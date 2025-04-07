@@ -34,7 +34,7 @@ public class WebSecurityConfiguration {
                 .authorizeHttpRequests()
                 .requestMatchers("/signup", "/login", "/quickplay").permitAll()
                 .and()
-                .authorizeHttpRequests().requestMatchers("/api/**")
+                .authorizeHttpRequests().requestMatchers("/api/**","/api/room/**")
                 .authenticated()
                 .and()
                 .sessionManagement()

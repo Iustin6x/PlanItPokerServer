@@ -10,6 +10,8 @@ import com.example.PlanItPoker.payload.response.LoginResponse;
 import com.example.PlanItPoker.service.impl.UserServiceImpl;
 import com.example.PlanItPoker.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(RoomController.class);
     private final AuthenticationManager authenticationManager;
 
     private final UserServiceImpl userService;
@@ -84,7 +87,11 @@ public class AuthController {
         String token = authHeader.substring(7); // Remove "Bearer " prefix
         UUID userId = jwtUtil.extractUserId(token);
         com.example.PlanItPoker.model.User user = userService.findById(userId);
+        logger.info("api/user",user.getId());
         return ResponseEntity.ok(user);
     }
+
+
+
 
 }

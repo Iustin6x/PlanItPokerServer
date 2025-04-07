@@ -1,16 +1,19 @@
 package com.example.PlanItPoker.service;
 
 import com.example.PlanItPoker.model.Room;
+import com.example.PlanItPoker.payload.DTOs.RoomDTO;
+import com.example.PlanItPoker.payload.request.RoomRequest;
 import com.example.PlanItPoker.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
-public class RoomService {
-    private final RoomRepository roomRepository;
-    public Room postRoom(Room room){
-        return roomRepository.save(room);
-    }
+import java.util.List;
+import java.util.UUID;
 
+
+public interface RoomService {
+    RoomDTO createRoom(RoomRequest request, UUID creatorId);
+    List<RoomDTO> getUserRooms(UUID userId);
+    void deleteRoom(UUID roomId);
+    RoomDTO updateRoom(UUID roomId, RoomRequest request, UUID userId);
 }

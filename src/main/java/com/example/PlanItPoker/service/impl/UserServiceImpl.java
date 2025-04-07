@@ -1,5 +1,6 @@
 package com.example.PlanItPoker.service.impl;
 
+import com.example.PlanItPoker.payload.request.UserProfileRequest;
 import org.springframework.security.core.userdetails.User;
 import com.example.PlanItPoker.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
 
 import java.util.Collections;
 import java.util.UUID;
@@ -58,4 +60,21 @@ public class UserServiceImpl implements UserDetailsService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + id));
     }
+
+//    public User updateProfile(UUID userId, UserProfileRequest request) {
+//        User user = userRepository.findById(userId).orElseThrow();
+//        user.setName(request.getName());
+//        user.setAvatar(request.getAvatar());
+//        return userRepository.save(user);
+//    }
+//
+//    public User getOrCreateGuest(String tempName) {
+//        return userRepository.findByName(tempName)
+//                .orElseGet(() -> {
+//                    User guest = new User();
+//                    guest.setName(tempName);
+//                    guest.setGuest(true);
+//                    return userRepository.save(guest);
+//                });
+//    }
 }
