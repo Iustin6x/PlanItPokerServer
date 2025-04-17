@@ -9,7 +9,10 @@ import java.util.UUID;
 
 public interface PlayerRepository extends JpaRepository<Player, UUID> {
     Optional<Player> findByRoomIdAndUserId(UUID roomId, UUID userId);
+    Optional<Player> findByUserId(UUID userId);
     List<Player> findByRoomId(UUID roomId);
     List<Player> findAllByRoomId(UUID roomId);
     void deleteAllByRoomId(UUID roomId);
+    List<Player> findAllByRoomIdAndIsConnectedTrue(UUID roomId);
+
 }

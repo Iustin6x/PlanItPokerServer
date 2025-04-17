@@ -1,8 +1,12 @@
 package com.example.PlanItPoker.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
+@JsonIgnoreProperties("room")
 @Data
 @Entity
 @Table(name = "custom_cards")
@@ -16,6 +20,8 @@ public class CustomCard {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
+    @ToString.Exclude
+    @JsonBackReference
     private Room room;
 
     // Getters, Setters, Constructori

@@ -44,6 +44,11 @@ public class VoteSession {
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     private List<Vote> votes = new ArrayList<>();
 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", nullable = false)
+    private Room room;
+
     public UUID getId() {
         return id;
     }
@@ -99,6 +104,15 @@ public class VoteSession {
     public void setVotes(List<Vote> votes) {
         this.votes = votes;
     }
+
+    public Room getRoom() {
+        return room;
+    }
+
+    public void setRoom(Room room) {
+        this.room = room;
+    }
+
 
     // Getters, Setters, Constructors
 }

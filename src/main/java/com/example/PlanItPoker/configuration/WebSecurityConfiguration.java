@@ -30,19 +30,27 @@ public class WebSecurityConfiguration {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity security) throws Exception {
-        return security.csrf().disable()
-                .authorizeHttpRequests()
-                .requestMatchers("/signup", "/login", "/quickplay").permitAll()
-                .and()
-                .authorizeHttpRequests().requestMatchers("/api/**","/api/room/**")
-                .authenticated()
-                .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
+        return security
+                // Dezactivează complet CSRF (nu este necesar pentru API-uri stateless cu JWT)
+                .csrf(csrf -> csrf.disable())
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/signup",
+                                "/login",
+                                "/quickplay",
+                                "/ws/**"       // Endpoint WebSocket
+                        ).permitAll()
+                        .requestMatchers("/api/**", "/api/room/**", "/api/rooms/**")
+                        .authenticated()
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {

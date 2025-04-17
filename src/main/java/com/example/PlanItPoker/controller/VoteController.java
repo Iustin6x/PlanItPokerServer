@@ -5,7 +5,6 @@ import com.example.PlanItPoker.payload.DTOs.RoomDTO;
 import com.example.PlanItPoker.payload.request.VoteRequest;
 import com.example.PlanItPoker.service.RoomService;
 import com.example.PlanItPoker.service.impl.UserServiceImpl;
-import com.example.PlanItPoker.service.impl.VotingServiceImpl;
 import com.example.PlanItPoker.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,6 @@ import java.util.UUID;
 public class VoteController {
     private final RoomService roomService;
     private final UserServiceImpl userService;
-    private final VotingServiceImpl votingService;
 
 
     private final JwtUtil jwtUtil;

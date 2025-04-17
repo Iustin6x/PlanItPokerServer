@@ -1,12 +1,13 @@
 package com.example.PlanItPoker.model;
 
 import com.example.PlanItPoker.model.enums.CardType;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,16 +38,19 @@ public class Room {
     private CardType cardType;
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<CustomCard> customCards = new ArrayList<>();
 
     @Column(name = "invite_link", unique = true, nullable = false)
     private String inviteLink;
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL)
+    @ToString.Exclude
     private List<Player> players = new ArrayList<>();
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL)
     @OrderBy("storyOrder ASC") // Use camelCase "storyOrder"
+    @ToString.Exclude
     private List<Story> stories = new ArrayList<>();
 
     public List<String> getAllCards() {
@@ -127,5 +131,10 @@ public class Room {
 
     public void setCustomCards(List<CustomCard> customCards) {
         this.customCards = customCards;
+    }
+
+    public void addPlayer(Player player) {
+        this.players.add(player); // Add player to Room's list
+        player.setRoom(this); // Set the Room in Player
     }
 }

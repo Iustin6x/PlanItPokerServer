@@ -14,4 +14,9 @@ public interface RoomRepository  extends JpaRepository<Room, UUID> {
     @Query("SELECT r FROM Room r JOIN r.players p WHERE p.user.id = :userId")
     List<Room> findAllByUserId(@Param("userId") UUID userId);
 
+    @Query("SELECT r FROM Room r LEFT JOIN FETCH r.players WHERE r.id = :roomId")
+    Room findByIdWithPlayers(@Param("roomId") UUID roomId);
+
+
+
 }

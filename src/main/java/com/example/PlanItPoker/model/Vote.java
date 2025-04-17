@@ -13,7 +13,8 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "votes")
+@Table(name = "votes",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"session_id", "user_id"}))
 public class Vote {
     @Id
     @GeneratedValue(generator = "UUID")

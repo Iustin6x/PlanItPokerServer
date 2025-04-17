@@ -36,7 +36,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-
+        logger.info("doFilterInternal");
         try {
             String authHeader = request.getHeader("Authorization");
 
@@ -47,6 +47,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
             String[] parts = authHeader.split("\\s+");
             if (parts.length != 2 || !parts[0].equalsIgnoreCase("Bearer")) {
+                logger.warn("Authorization header is incorrect");
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -56,6 +57,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userService.loadUserByUsername(username);
+                logger.info("username {} logged in", username);
 
                 if (jwtUtil.validateToken(token, userDetails)) {
                     if (!userDetails.isEnabled()) {
