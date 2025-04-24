@@ -49,7 +49,6 @@ public class Room {
     private List<Player> players = new ArrayList<>();
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL)
-    @OrderBy("storyOrder ASC") // Use camelCase "storyOrder"
     @ToString.Exclude
     private List<Story> stories = new ArrayList<>();
 

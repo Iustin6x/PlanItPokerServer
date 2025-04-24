@@ -12,12 +12,15 @@ import com.example.PlanItPoker.repository.RoomRepository;
 import com.example.PlanItPoker.repository.StoryRepository;
 import com.example.PlanItPoker.repository.VoteSessionRepository;
 import com.example.PlanItPoker.service.VoteSessionService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -80,9 +83,15 @@ public class VoteSessionServiceImpl implements VoteSessionService {
         VoteSession voteSession = voteSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Vote session not found"));
 
-        voteSession.setRevealed(true);
-        voteSessionRepository.save(voteSession);
+        if (voteSession.getVotes() == null || voteSession.getVotes().isEmpty()) {
+            throw new IllegalStateException("Cannot reveal votes: No votes have been cast.");
+        }
 
+        voteSession.setRevealed(true);
+        String result = calculateResult(voteSession); // metoda ta de calcul
+        voteSession.setResult(result);
+
+        voteSessionRepository.save(voteSession);
     }
 
     @Transactional
@@ -102,6 +111,24 @@ public class VoteSessionServiceImpl implements VoteSessionService {
         return voteSessionRepository.findByRoom_IdAndStatus(roomId, SessionStatus.ACTIVE)
                 .map(VoteSessionDTO::fromEntity)
                 .orElse(null);
+    }
+
+    private String calculateResult(VoteSession voteSession) {
+        return voteSession.getVotes().stream()
+                .map(v -> v.getCardValue())
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.groupingBy(v -> v, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("No Votes");
+    }
+
+    @Override
+    public VoteSessionDTO getSessionByStoryId(UUID storyId) {
+        VoteSession session = voteSessionRepository.findByStoryId(storyId)
+                .orElseThrow(() -> new EntityNotFoundException("Vote session not found for story"));
+        return VoteSessionDTO.fromEntity(session);
     }
 
 

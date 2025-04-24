@@ -37,9 +37,6 @@ public class StoryServiceImpl implements StoryService {
         story.setFinalResult(null); // null inițial
         story.setRoom(room);
 
-        // opțional: setează order în funcție de câte stories există deja
-        int order = storyRepository.findAllByRoom_Id(roomId).size();
-        story.setStoryOrder(order);
 
         return StoryDTO.fromEntity(storyRepository.save(story));
     }
@@ -97,20 +94,6 @@ public class StoryServiceImpl implements StoryService {
         return StoryDTO.fromEntity(story);
     }
 
-    @Override
-    public StoryDTO updateStoryOrder(UUID storyId, int newOrder) {
-
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new EntityNotFoundException("Story not found"));
-
-        if (newOrder < 0) {
-            throw new IllegalArgumentException("Story order cannot be negative");
-        }
-
-        story.setStoryOrder(newOrder);
-
-        return StoryDTO.fromEntity(storyRepository.save(story));
-    }
 
     @Override
     public StoryDTO updateStoryStatus(UUID storyId, StoryStatus status) {
@@ -123,7 +106,7 @@ public class StoryServiceImpl implements StoryService {
 
     @Override
     public StoryDTO getNextStoryToVote(UUID roomId) {
-        Story story = storyRepository.findFirstByRoom_IdAndStatusOrderByStoryOrderAsc(roomId, StoryStatus.ACTIVE)
+        Story story = storyRepository.findFirstByRoom_IdAndStatus(roomId, StoryStatus.ACTIVE)
                 .orElseThrow(() -> new EntityNotFoundException("Story not found"));
         return StoryDTO.fromEntity(story);
     }

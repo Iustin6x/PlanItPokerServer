@@ -18,4 +18,13 @@ public record VoteDTO(
                 vote.getCardValue()
         );
     }
+
+    public static VoteDTO fromEntity(Vote vote, boolean revealed) {
+        return new VoteDTO(
+                vote.getId(),
+                vote.getUser().getId(),
+                vote.getSession().getId(),
+                revealed ? vote.getCardValue() : null
+        );
+    }
 }

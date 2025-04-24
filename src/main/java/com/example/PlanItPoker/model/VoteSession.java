@@ -44,6 +44,8 @@ public class VoteSession {
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     private List<Vote> votes = new ArrayList<>();
 
+    @Column(name = "result")
+    private String result;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
@@ -87,6 +89,14 @@ public class VoteSession {
 
     public void setRevealed(boolean revealed) {
         this.revealed = revealed;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public void setResult(String result) {
+        this.result = result;
     }
 
     public Story getStory() {

@@ -24,9 +24,6 @@ public class Story {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "story_order")
-    private Integer storyOrder;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StoryStatus status;
@@ -92,13 +89,5 @@ public class Story {
 
     public UUID getRoomId() {
         return room.getId();
-    }
-
-    public Integer getStoryOrder() {
-        return storyOrder;
-    }
-
-    public void setStoryOrder(Integer storyOrder) {
-        this.storyOrder = storyOrder;
     }
 }

@@ -41,8 +41,6 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         String userId = (String) session.getAttributes().get("userId");
-
-        // Acum poți să cauți userul direct sau să îl salvezi în context
         System.out.println("User connected with id: " + userId);
     }
 
@@ -61,8 +59,6 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
             handleCreateStory(session, payload);
         } else if ("updateStory".equals(type)) {
             handleUpdateStory(session, payload);
-        } else if ("updateStoryOrder".equals(type)) {
-            handleUpdateStoryOrder(session, payload);
         }else if ("deleteStory".equals(type)) {
             handleDeleteStory(session, payload);
         } else if ("getStories".equals(type)) {
@@ -74,11 +70,13 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
         } else if ("addVote".equals(type)) {
             handleAddVote(session, payload);
         } else if ("revealVotes".equals(type)) {
-            handleShowVotes(session, payload);
+            handleRevealVotes(session, payload);
         } else if ("clearVotes".equals(type)) {
             handleClearVotes(session, payload);
         } else if ("endVoteSession".equals(type)) {
             handleEndVoteSession(session, payload);
+        }   else if ("getStoryWithSession".equals(type)) {
+            handleGetStoryWithSession(session, payload);
         }
     }
 
@@ -210,6 +208,26 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
         ));
     }
 
+    private void handleGetStoryWithSession(WebSocketSession session, Map<String, String> payload) throws IOException {
+        UUID storyId = UUID.fromString(payload.get("storyId"));
+
+        StoryDTO story = storyService.getStoryById(storyId);
+
+        VoteSessionDTO voteSession = voteSessionService.getSessionByStoryId(storyId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("type", "storyWithSession");
+        response.put("story", story);
+
+        if (voteSession != null) {
+            response.put("session", voteSession);
+        } else {
+            response.put("session", null);
+        }
+
+        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+    }
+
     private void handleUpdateStory(WebSocketSession session, Map<String, String> payload) throws IOException {
         UUID roomId = UUID.fromString((String) session.getAttributes().get("roomId"));
         UUID storyId = UUID.fromString(payload.get("storyId"));
@@ -248,20 +266,6 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
                 "type", "storyList",
                 "stories", stories
         ))));
-    }
-
-    private void handleUpdateStoryOrder(WebSocketSession session, Map<String, String> payload) throws IOException {
-        UUID roomId = UUID.fromString((String) session.getAttributes().get("roomId"));
-        UUID storyId = UUID.fromString(payload.get("storyId"));
-        int newOrder = Integer.parseInt(payload.get("newOrder"));
-
-
-        StoryDTO updatedStory = storyService.updateStoryOrder(storyId, newOrder);
-
-        broadcastToRoom(roomId, Map.of(
-                "type", "storyUpdated",
-                "story", updatedStory
-        ));
     }
 
 
@@ -319,8 +323,8 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
         var voteDTO = voteService.addVote(sessionId, playerId, cardValue);
 
         broadcastToRoom(roomId, Map.of(
-                "type", "playerVoted",
-                "playerId", playerId
+                "type", "voteAdded",
+                "vote", voteDTO
         ));
 
         if (playerService.allPlayersVoted(roomId, sessionId)) {
@@ -351,21 +355,33 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
         ));
     }
 
-    private void handleShowVotes(WebSocketSession session, Map<String, String> payload) throws IOException {
+    private void handleRevealVotes(WebSocketSession session, Map<String, String> payload) throws IOException {
         UUID sessionId = UUID.fromString(payload.get("sessionId"));
         UUID roomId = UUID.fromString((String) session.getAttributes().get("roomId"));
 
-        voteSessionService.revealVotes(sessionId);
+        try {
+            voteSessionService.revealVotes(sessionId);
 
-        var voteList = voteService.getVotesForSession(sessionId);
+            var voteList = voteService.getVotesForSession(sessionId);
+            String calculatedResult = calculateVoteResult(voteList);
 
-        String calculatedResult = calculateVoteResult(voteList);
-
-        broadcastToRoom(roomId, Map.of(
-                "type", "votesRevealed",
-                "votes", voteList,
-                "result", calculatedResult
-        ));
+            broadcastToRoom(roomId, Map.of(
+                    "type", "votesRevealed",
+                    "votes", voteList,
+                    "result", calculatedResult
+            ));
+        } catch (IllegalStateException e) {
+            // Send error only to the client who triggered the action
+            session.sendMessage(new TextMessage(new ObjectMapper().writeValueAsString(Map.of(
+                    "type", "error",
+                    "message", "You cannot reveal votes if no one has voted."
+            ))));
+        } catch (IllegalArgumentException e) {
+            session.sendMessage(new TextMessage(new ObjectMapper().writeValueAsString(Map.of(
+                    "type", "error",
+                    "message", "Vote session not found."
+            ))));
+        }
     }
 
     private String calculateVoteResult(List<VoteDTO> votes) {

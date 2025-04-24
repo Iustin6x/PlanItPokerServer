@@ -29,5 +29,5 @@ public interface VoteSessionService {
 
     VoteSessionDTO getActiveVoteSessionByRoomId(UUID roomId);
 
-
+    VoteSessionDTO getSessionByStoryId(UUID storyId);
 }

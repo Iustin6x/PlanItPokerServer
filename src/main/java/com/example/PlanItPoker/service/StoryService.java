@@ -20,7 +20,7 @@ public interface StoryService {
 
     StoryDTO getStoryById(UUID storyId);
 
-    StoryDTO updateStoryOrder(UUID storyId, int newOrder);
+
 
     StoryDTO updateStoryStatus(UUID storyId, StoryStatus status);
 

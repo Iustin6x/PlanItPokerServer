@@ -16,11 +16,13 @@ public record VoteSessionDTO(
         boolean revealed,
         UUID storyId,
         UUID roomId,
-        List<VoteDTO> votes  // Adăugăm lista de voturi
+        List<VoteDTO> votes,  // Adăugăm lista de voturi
+        String result
 ) {
     public static VoteSessionDTO fromEntity(VoteSession session) {
+
         List<VoteDTO> votes = session.getVotes().stream()
-                .map(VoteDTO::fromEntity)  // Transforma voturile în DTO-uri
+                .map(vote -> VoteDTO.fromEntity(vote, session.isRevealed()))
                 .collect(Collectors.toList());
 
         return new VoteSessionDTO(
@@ -31,7 +33,8 @@ public record VoteSessionDTO(
                 session.isRevealed(),
                 session.getStory().getId(),
                 session.getRoom().getId(),
-                votes
+                votes,
+                session.getResult()
         );
     }
 }

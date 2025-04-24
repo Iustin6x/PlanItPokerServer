@@ -9,17 +9,14 @@ public record StoryDTO(
         UUID id,
         String name,
         String finalResult,
-        StoryStatus status,
-        Integer order
+        StoryStatus status
 ) {
     public static StoryDTO fromEntity(Story story) {
         return new StoryDTO(
                 story.getId(),
                 story.getName(),
                 story.getFinalResult(),
-                story.getStatus(),
-                story.getStoryOrder()
-
+                story.getStatus()
         );
     }
 }

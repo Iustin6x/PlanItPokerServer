@@ -63,7 +63,7 @@ public class VoteServiceImpl implements VoteService {
 
         voteRepository.save(newVote);
 
-        return VoteDTO.fromEntity(newVote);
+        return VoteDTO.fromEntity(newVote, false);
     }
 
 

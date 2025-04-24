@@ -116,17 +116,17 @@ public class PlayerServiceImpl implements PlayerService {
     @Transactional
     @Override
     public boolean allPlayersVoted(UUID roomId, UUID sessionId) {
-        // Obținem lista de jucători online din cameră
         List<Player> onlinePlayers = playerRepository.findAllByRoomIdAndIsConnectedTrue(roomId);
 
-        // Verificăm dacă fiecare jucător a votat în sesiunea respectivă
         for (Player player : onlinePlayers) {
-            Optional<Vote> vote = voteRepository.findBySession_IdAndUser_Id(sessionId, player.getUser().getId());
-            if (!vote.isPresent()) {
-                return false; // Dacă un jucător nu a votat, returnează false
+            if (player.getRole() != PlayerRole.OBSERVER) {
+                Optional<Vote> vote = voteRepository.findBySession_IdAndUser_Id(sessionId, player.getUser().getId());
+                if (!vote.isPresent()) {
+                    return false;
+                }
             }
         }
 
-        return true; // Dacă toți jucătorii au votat, returnează true
+        return true;
     }
 }

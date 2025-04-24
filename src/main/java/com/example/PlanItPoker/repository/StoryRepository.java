@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface StoryRepository extends JpaRepository<Story, UUID> {
-    Optional<Story> findFirstByRoom_IdAndStatusOrderByStoryOrderAsc(UUID roomId, StoryStatus status);
+    Optional<Story> findFirstByRoom_IdAndStatus(UUID roomId, StoryStatus status);
     List<Story> findAllByRoom_Id(UUID roomId);
     void deleteAllByRoom_Id(UUID roomId);
 
