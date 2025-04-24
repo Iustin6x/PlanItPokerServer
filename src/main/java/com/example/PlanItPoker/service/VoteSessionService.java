@@ -27,7 +27,9 @@ public interface VoteSessionService {
     @Transactional
     void hideVotes(UUID sessionId);
 
+    @Transactional
     VoteSessionDTO getActiveVoteSessionByRoomId(UUID roomId);
 
+    @Transactional
     VoteSessionDTO getSessionByStoryId(UUID storyId);
 }

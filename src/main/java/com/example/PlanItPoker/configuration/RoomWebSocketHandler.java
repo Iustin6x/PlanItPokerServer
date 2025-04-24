@@ -409,9 +409,12 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
 
         VoteSession endedSession = voteService.endVoteSession(sessionId, finalValue);
 
+        StoryDTO endedStory = storyService.getStoryById(endedSession.getStory().getId());
+
         broadcastToRoom(roomId, Map.of(
                 "type", "voteEnded",
-                "finalValue", finalValue
+                "finalValue", finalValue,
+                "story", endedStory
         ));
     }
 

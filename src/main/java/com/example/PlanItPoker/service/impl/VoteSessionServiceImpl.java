@@ -124,10 +124,12 @@ public class VoteSessionServiceImpl implements VoteSessionService {
                 .orElse("No Votes");
     }
 
+    @Transactional
     @Override
     public VoteSessionDTO getSessionByStoryId(UUID storyId) {
         VoteSession session = voteSessionRepository.findByStoryId(storyId)
                 .orElseThrow(() -> new EntityNotFoundException("Vote session not found for story"));
+        session.getVotes().size();
         return VoteSessionDTO.fromEntity(session);
     }
 
