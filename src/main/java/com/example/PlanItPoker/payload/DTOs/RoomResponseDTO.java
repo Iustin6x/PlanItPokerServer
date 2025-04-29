@@ -5,24 +5,28 @@ import com.example.PlanItPoker.model.enums.CardType;
 
 import java.util.List;
 
-public class RoomInfoDTO {
+public class RoomResponseDTO {
+
 
     private String name;
     private CardType cardType;
     private List<String> customCards;
+    private RoomSettingsDTO roomSettings;
 
-    public RoomInfoDTO(String name, CardType cardType, List<String> customCards) {
+    public RoomResponseDTO(String name, CardType cardType, List<String> customCards, RoomSettingsDTO roomSettings) {
         this.name = name;
         this.cardType = cardType;
         this.customCards = customCards;
+        this.roomSettings = roomSettings;
     }
 
-    public static RoomInfoDTO fromEntity(Room room) {
+    public static RoomResponseDTO fromEntity(Room room) {
         List<String> cards = room.getCustomCards()
                 .stream()
                 .map(card -> card.getValue())
                 .toList();
-        return new RoomInfoDTO(room.getName(), room.getCardType(), cards);
+        RoomSettingsDTO roomSettingsDTO = RoomSettingsDTO.fromEntity(room.getRoomSettings());
+        return new RoomResponseDTO(room.getName(), room.getCardType(), cards, roomSettingsDTO);
     }
 
     public String getName() {
@@ -47,5 +51,13 @@ public class RoomInfoDTO {
 
     public void setCustomCards(List<String> customCards) {
         this.customCards = customCards;
+    }
+
+    public RoomSettingsDTO getRoomSettings() {
+        return roomSettings;
+    }
+
+    public void setRoomSettings(RoomSettingsDTO roomSettings) {
+        this.roomSettings = roomSettings;
     }
 }

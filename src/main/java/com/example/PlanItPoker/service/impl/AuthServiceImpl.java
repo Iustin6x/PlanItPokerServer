@@ -24,20 +24,41 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public User createUser(SignupRequest signupRequest) {
-        //Check if customer already exist
-        if (userRepository.existsByEmail(signupRequest.getEmail())) {
-            return null;
+        // Verifică dacă există guest user pentru conversie
+        if(signupRequest.getGuestUserId() != null) {
+            User guestUser = userRepository.findById(signupRequest.getGuestUserId())
+                    .orElseThrow(() -> new RuntimeException("Guest user not found"));
+
+            if(!guestUser.isGuest()) {
+                throw new RuntimeException("User is already registered");
+            }
+
+            // Verifică unicătatea email-ului
+            if(userRepository.existsByEmail(signupRequest.getEmail())) {
+                throw new RuntimeException("Email is already in use");
+            }
+
+            // Actualizează guest user-ul existent
+            guestUser.setEmail(signupRequest.getEmail());
+            guestUser.setName(signupRequest.getName());
+            guestUser.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
+            guestUser.setGuest(false);
+
+            return userRepository.save(guestUser);
         }
 
-        User user = new User();
-        BeanUtils.copyProperties(signupRequest,user);
+        // Cazul pentru înregistrare nouă normală
+        if(userRepository.existsByEmail(signupRequest.getEmail())) {
+            throw new RuntimeException("Email is already registered");
+        }
 
-        //Hash the password before saving
-        String hashPassword = passwordEncoder.encode(signupRequest.getPassword());
-        user.setPassword(hashPassword);
-        User createdCustomer = userRepository.save(user);
-        user.setId(createdCustomer.getId());
-        return user;
+        User newUser = new User();
+        newUser.setEmail(signupRequest.getEmail());
+        newUser.setName(signupRequest.getName());
+        newUser.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
+        newUser.setGuest(false);
+
+        return userRepository.save(newUser);
     }
 
     @Override

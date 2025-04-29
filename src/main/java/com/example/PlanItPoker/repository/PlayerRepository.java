@@ -14,5 +14,6 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
     List<Player> findAllByRoomId(UUID roomId);
     void deleteAllByRoomId(UUID roomId);
     List<Player> findAllByRoomIdAndIsConnectedTrue(UUID roomId);
+    Optional<Player> findByUserIdAndRoomId(UUID userId, UUID roomId);
 
 }

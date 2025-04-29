@@ -3,11 +3,10 @@ package com.example.PlanItPoker.controller;
 import com.example.PlanItPoker.exception.RoomNotFoundException;
 import com.example.PlanItPoker.model.User;
 import com.example.PlanItPoker.payload.DTOs.PlayerDTO;
-import com.example.PlanItPoker.payload.DTOs.RoomDTO;
+import com.example.PlanItPoker.payload.DTOs.RoomListDTO;
 import com.example.PlanItPoker.payload.request.RoomRequest;
 import com.example.PlanItPoker.service.PlayerService;
 import com.example.PlanItPoker.service.RoomService;
-import com.example.PlanItPoker.service.impl.PlayerServiceImpl;
 import com.example.PlanItPoker.service.impl.UserServiceImpl;
 import com.example.PlanItPoker.utils.JwtUtil;
 import org.slf4j.Logger;
@@ -42,7 +41,7 @@ public class RoomController {
 
 
     @GetMapping("/rooms")
-    public ResponseEntity<List<RoomDTO>> getUserRooms(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<List<RoomListDTO>> getUserRooms(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7); // Remove "Bearer " prefix
         UUID userId = jwtUtil.extractUserId(token);
         User user = userService.findById(userId);
@@ -52,7 +51,7 @@ public class RoomController {
 
 
     @PostMapping("/room")
-    public ResponseEntity<RoomDTO> createRoom(@RequestBody RoomRequest request, @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<RoomListDTO> createRoom(@RequestBody RoomRequest request, @RequestHeader("Authorization") String authHeader) {
         logger.info("Creating a new room");
         String token = authHeader.substring(7); // Remove "Bearer " prefix
         UUID userId = jwtUtil.extractUserId(token);
@@ -62,7 +61,7 @@ public class RoomController {
     }
 
     @PutMapping("/rooms/{roomId}")
-    public ResponseEntity<RoomDTO> updateRoom(
+    public ResponseEntity<RoomListDTO> updateRoom(
             @PathVariable UUID roomId,
             @RequestBody RoomRequest request,
             @RequestHeader("Authorization") String authHeader) {
@@ -71,7 +70,7 @@ public class RoomController {
         UUID userId = jwtUtil.extractUserId(token);
         User user = userService.findById(userId);
 
-        RoomDTO updatedRoom = roomService.updateRoom(roomId, request, user.getId());
+        RoomListDTO updatedRoom = RoomListDTO.fromEntity(roomService.updateRoom(roomId, request, user.getId()), user.getId());
 
         return ResponseEntity.ok(updatedRoom);
     }
@@ -85,6 +84,19 @@ public class RoomController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/rooms/{roomId}")
+    public ResponseEntity<RoomRequest> getRoomById(
+            @PathVariable UUID roomId,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        String token = authHeader.substring(7); // Remove "Bearer " prefix
+        UUID userId = jwtUtil.extractUserId(token);
+
+        RoomRequest roomRequest = RoomRequest.fromEntity(roomService.getRoomById(roomId));
+        return ResponseEntity.ok(roomRequest);
+    }
+
 
     @PostMapping("/rooms/{roomId}/join")
     public ResponseEntity<?> joinRoom(

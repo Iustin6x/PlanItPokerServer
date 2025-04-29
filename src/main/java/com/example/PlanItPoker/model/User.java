@@ -1,6 +1,7 @@
 package com.example.PlanItPoker.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -35,6 +36,7 @@ public class User {
     private String password;
 
     @Column(nullable = false)
+    @JsonProperty("isGuest") // Adaugă această anotație
     private boolean isGuest;
 
     @Column

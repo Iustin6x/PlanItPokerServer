@@ -52,6 +52,10 @@ public class Room {
     @ToString.Exclude
     private List<Story> stories = new ArrayList<>();
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "settings_id", referencedColumnName = "id")
+    private RoomSettings roomSettings;
+
     public List<String> getAllCards() {
         List<String> allCards = new ArrayList<>();
         allCards.addAll(customCards.stream()

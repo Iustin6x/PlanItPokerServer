@@ -9,6 +9,7 @@ import lombok.ToString;
 import org.hibernate.annotations.GenericGenerator;
 
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -46,5 +47,31 @@ public class Player {
     @Column(name = "vote")
     private String vote;
 
-    // Getters, Setters, Constructors
+    @Column(name = "last_action_time")
+    private LocalDateTime lastActionTime;
+
+
+    @PrePersist
+    protected void onCreate() {
+        lastActionTime = LocalDateTime.now();
+    }
+
+    public void recordAction() {
+        this.lastActionTime = LocalDateTime.now();
+    }
+
+    public void setHasVoted(boolean hasVoted) {
+        this.hasVoted = hasVoted;
+        recordAction();
+    }
+
+    public void setIsConnected(boolean isConnected) {
+        this.isConnected = isConnected;
+        recordAction();
+    }
+
+    public void setVote(String vote) {
+        this.vote = vote;
+        recordAction();
+    }
 }

@@ -25,4 +25,6 @@ public interface PlayerService {
 
     @org.springframework.transaction.annotation.Transactional
     boolean allPlayersVoted(UUID roomId, UUID sessionId);
+
+    void recordAction(UUID playerId);
 }

@@ -1,14 +1,11 @@
 package com.example.PlanItPoker.service.impl;
 
-import com.example.PlanItPoker.configuration.RoomUpdateEvent;
-import com.example.PlanItPoker.controller.RoomController;
 import com.example.PlanItPoker.exception.RoomNotFoundException;
+import com.example.PlanItPoker.exception.UnauthorizedActionException;
 import com.example.PlanItPoker.exception.UserNotFoundException;
 import com.example.PlanItPoker.model.*;
 import com.example.PlanItPoker.model.enums.CardType;
 import com.example.PlanItPoker.model.enums.PlayerRole;
-import com.example.PlanItPoker.model.enums.SessionStatus;
-import com.example.PlanItPoker.model.enums.StoryStatus;
 import com.example.PlanItPoker.payload.DTOs.*;
 import com.example.PlanItPoker.payload.request.RoomRequest;
 import com.example.PlanItPoker.repository.*;
@@ -20,9 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
-import javax.smartcardio.Card;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -33,14 +28,16 @@ public class RoomServiceImpl implements RoomService {
     private static final Logger logger = LoggerFactory.getLogger(RoomServiceImpl.class);
 
     private final RoomRepository roomRepository;
+    private final RoomSettingsRepository roomSettingsRepository;
     private final PlayerRepository playerRepository;
     private final StoryRepository storyRepository;
     private final UserRepository userRepository;
     private final VoteSessionRepository voteSessionRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public RoomServiceImpl(RoomRepository roomRepository, PlayerRepository playerRepository, StoryRepository storyRepository, UserRepository userRepository, VoteSessionRepository voteSessionRepository, ApplicationEventPublisher eventPublisher) {
+    public RoomServiceImpl(RoomRepository roomRepository, RoomSettingsRepository roomSettingsRepository, PlayerRepository playerRepository, StoryRepository storyRepository, UserRepository userRepository, VoteSessionRepository voteSessionRepository, ApplicationEventPublisher eventPublisher) {
         this.roomRepository = roomRepository;
+        this.roomSettingsRepository = roomSettingsRepository;
         this.playerRepository = playerRepository;
         this.storyRepository = storyRepository;
         this.userRepository = userRepository;
@@ -51,196 +48,208 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     @Transactional
-    public RoomDTO createRoom(RoomRequest request, UUID creatorId) {
-        User creator = userRepository.findById(creatorId)
-                .orElseThrow(() -> new UserNotFoundException(creatorId));
+    public RoomListDTO createRoom(RoomRequest request, UUID creatorId) {
+        try {
+            User creator = userRepository.findById(creatorId)
+                    .orElseThrow(() -> new UserNotFoundException(creatorId));
 
-        Room room = new Room();
-        room.setName(request.name());
-        room.setCardType(request.cardType());
-        room.setInviteLink(UUID.randomUUID().toString());
+            Room room = request.toEntity();
+            room.setInviteLink(UUID.randomUUID().toString());
 
-        if(request.cards() != null) {
-            request.cards().forEach(room::addCustomCard);
+            RoomSettings savedSettings = roomSettingsRepository.save(room.getRoomSettings());
+            room.setRoomSettings(savedSettings);
+
+            Room savedRoom = roomRepository.save(room);
+
+            logger.info("Room created: " + savedRoom);
+
+            Player moderatorPlayer = new Player();
+            moderatorPlayer.setUser(creator);
+            moderatorPlayer.setRole(PlayerRole.MODERATOR);
+            moderatorPlayer.setIsConnected(false);
+
+            savedRoom.addPlayer(moderatorPlayer);
+            playerRepository.save(moderatorPlayer);
+
+            Room roomWithPlayers = roomRepository.findById(savedRoom.getId())
+                    .orElseThrow(() -> new RuntimeException("Room not found after creation"));
+
+            return RoomListDTO.fromEntity(roomWithPlayers, creatorId);
+
+        } catch (UserNotFoundException e) {
+            logger.error("User not found during room creation: {}", e.getMessage());
+            throw e; // Re-throw exception
+        } catch (Exception e) {
+            logger.error("Unexpected error during room creation: {}", e.getMessage());
+            throw new RuntimeException("An error occurred while creating the room", e);
         }
-
-        Room savedRoom = roomRepository.save(room);
-
-        logger.info("Room created: " + savedRoom);
-
-        logger.info("Room created{)",creator);
-        Player moderatorPlayer = new Player();
-//        moderatorPlayer.setRoom(savedRoom);
-        moderatorPlayer.setUser(creator);
-        moderatorPlayer.setRole(PlayerRole.MODERATOR);
-        moderatorPlayer.setConnected(false);
-
-//        playerRepository.save(moderatorPlayer);
-
-        savedRoom.addPlayer(moderatorPlayer);
-
-        playerRepository.save(moderatorPlayer);
-
-
-        Room roomWithPlayers = roomRepository.findById(savedRoom.getId())
-                .orElseThrow(() -> new RuntimeException("Room not found after creation"));
-
-        return convertToDTO(roomWithPlayers, creatorId);
     }
 
+
     @Override
-    public List<RoomDTO> getUserRooms(UUID userId) {
-        List<Room> userRooms = roomRepository.findAllByUserId(userId);
-        return userRooms.stream()
-                .map(room -> convertToDTO(room, userId))
-                .collect(Collectors.toList());
+    public List<RoomListDTO> getUserRooms(UUID userId) {
+        try {
+            List<Room> userRooms = roomRepository.findAllByUserId(userId);
+            return userRooms.stream()
+                    .map(room -> RoomListDTO.fromEntity(room, userId))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Error retrieving rooms for user {}: {}", userId, e.getMessage());
+            throw new RuntimeException("An error occurred while retrieving the user's rooms", e);
+        }
     }
 
     @Override
     public void deleteRoom(UUID roomId) {
-        Room room = getRoomById(roomId);
+        try {
+            Room room = getRoomById(roomId);
 
-        // Delete all stories associated with the room
-        List<Story> stories = storyRepository.findAllByRoom_Id(roomId);
-        storyRepository.deleteAll(stories);
+            List<Story> stories = storyRepository.findAllByRoom_Id(roomId);
+            storyRepository.deleteAll(stories);
 
-        // Delete all players associated with the room
-        List<Player> players = playerRepository.findAllByRoomId(roomId);
-        playerRepository.deleteAll(players);
+            List<Player> players = playerRepository.findAllByRoomId(roomId);
+            playerRepository.deleteAll(players);
 
-        // Delete the room
-        roomRepository.delete(room);
+            roomRepository.delete(room);
+            logger.info("Room {} deleted successfully", roomId);
+        } catch (RoomNotFoundException e) {
+            logger.error("Room not found for deletion: {}", e.getMessage());
+            throw e; // Re-throw exception
+        } catch (Exception e) {
+            logger.error("Unexpected error during room deletion: {}", e.getMessage());
+            throw new RuntimeException("An error occurred while deleting the room", e);
+        }
     }
 
     @Override
-    public RoomDTO updateRoom(UUID roomId, RoomRequest request, UUID userId) {
-        Room room = getRoomById(roomId);
+    public Room updateRoom(UUID roomId, RoomRequest request, UUID userId) {
+        try {
+            Room room = getRoomById(roomId);
 
-        // Update room name if provided
-        if (request.name() != null) {
-            room.setName(request.name());
-        }
+            Player player = playerRepository.findByUserIdAndRoomId(userId, roomId)
+                    .orElseThrow(() -> new UnauthorizedActionException("User is not a participant in the room"));
 
-        // Handle card type and custom cards
-        if (request.cardType() != null) {
-            CardType newCardType = request.cardType();
-            room.setCardType(newCardType);
+            if (player.getRole() != PlayerRole.MODERATOR) {
+                throw new UnauthorizedActionException("Only moderators can update the room.");
+            }
 
-            if (newCardType != CardType.CUSTOM) {
-                room.getCustomCards().clear();
-            } else {
-                // Update custom cards if provided
-                if (request.cards() != null) {
+            if (request.getName() != null) {
+                room.setName(request.getName());
+            }
+
+            if (request.getCardType() != null) {
+                room.setCardType(request.getCardType());
+                if (request.getCardType() != CardType.CUSTOM) {
                     room.getCustomCards().clear();
-                    request.cards().forEach(room::addCustomCard);
+                } else {
+                    if (request.getCards() != null) {
+                        room.getCustomCards().clear();
+                        request.getCards().forEach(room::addCustomCard);
+                    }
                 }
-            }
-        } else if (request.cards() != null) {
-            // Update custom cards if current type is CUSTOM
-            if (room.getCardType() == CardType.CUSTOM) {
+            } else if (request.getCards() != null && room.getCardType() == CardType.CUSTOM) {
                 room.getCustomCards().clear();
-                request.cards().forEach(room::addCustomCard);
+                request.getCards().forEach(room::addCustomCard);
             }
-        }
 
-        Room updatedRoom = roomRepository.save(room);
-        return convertToDTO(updatedRoom, userId);
+            if (request.getRoomSettings() != null) {
+                RoomSettings settings = room.getRoomSettings();
+                if (settings == null) {
+                    settings = new RoomSettings();
+                }
+                settings.setAllowQuestionMark(request.getRoomSettings().isAllowQuestionMark());
+                settings.setAllowVoteModification(request.getRoomSettings().isAllowVoteModification());
+
+                roomSettingsRepository.save(settings);
+                room.setRoomSettings(settings);
+            }
+
+            Room updatedRoom = roomRepository.save(room);
+            logger.info("Room {} updated successfully", roomId);
+            return updatedRoom;
+
+        } catch (UnauthorizedActionException e) {
+            logger.error("Unauthorized action during room update: {}", e.getMessage());
+            throw e; // Re-throw exception
+        } catch (Exception e) {
+            logger.error("Unexpected error during room update: {}", e.getMessage());
+            throw new RuntimeException("An error occurred while updating the room", e);
+        }
     }
+
 
     @Override
     @Transactional
     public Room getRoomById(UUID roomId) {
-        Room room = roomRepository.findByIdWithPlayers(roomId);
-        if (room == null) {
-            throw new RoomNotFoundException(roomId);
+        try {
+            Room room = roomRepository.findByIdWithPlayers(roomId);
+            if (room == null) {
+                throw new RoomNotFoundException(roomId);
+            }
+            return room;
+        } catch (RoomNotFoundException e) {
+            logger.error("Room not found: {}", e.getMessage());
+            throw e; // Re-throw exception
+        } catch (Exception e) {
+            logger.error("Unexpected error during room retrieval: {}", e.getMessage());
+            throw new RuntimeException("An error occurred while retrieving the room", e);
         }
-        return room;
-    }
-
-    @Override
-    @Transactional
-    public RoomDetailsDTO getRoomDetails(UUID roomId) {
-        Room room = getRoomById(roomId);
-        room.getCustomCards().size();
-        String name = room.getName();
-
-//        List<Card> cards = room.getCustomCards();
-        List<PlayerDTO> players = playerRepository.findByRoomId(roomId)
-                .stream()
-                .map(PlayerDTO::fromEntity)
-                .toList();
-
-        List<StoryDTO> stories = room.getStories()
-                .stream()
-                .map(StoryDTO::fromEntity)
-                .toList();
-
-        List<String> customCards = room.getCustomCards().stream()
-                .map(x -> x.getValue())
-                .toList();
-
-        CardType cardType = room.getCardType();
-
-        Story inProgressStory = room.getStories().stream()
-                .filter(s -> s.getStatus() == StoryStatus.ACTIVE)
-                .findFirst()
-                .orElse(null);
-
-        StoryDTO currentStoryDTO = inProgressStory != null ? StoryDTO.fromEntity(inProgressStory) : null;
-
-        VoteSession activeVoteSession = voteSessionRepository.findByRoom_IdAndStatus(roomId, SessionStatus.ACTIVE)
-                .orElse(null);
-
-        VoteSessionDTO voteSessionDTO = activeVoteSession != null ? VoteSessionDTO.fromEntity(activeVoteSession) : null;
-
-
-        return new RoomDetailsDTO(name, cardType, customCards, players, stories, currentStoryDTO, voteSessionDTO);
-    }
-
-    private RoomDTO convertToDTO(Room room, UUID userId) {
-        Player player = room.getPlayers().stream()
-                .filter(p -> p.getUser().getId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("User not a participant in room"));
-
-        return new RoomDTO(
-                room.getId(),
-                room.getName(),
-                room.getStories().stream()
-                        .filter(s -> s.getStatus() == StoryStatus.COMPLETED)
-                        .findFirst()
-                        .map(Story::getName)
-                        .orElse("No completed stories"),
-                calculateTotalPoints(room),
-                room.getInviteLink(),
-                player.getRole()
-        );
-    }
-
-    private int calculateTotalPoints(Room room) {
-        return room.getStories().stream()
-                .filter(s -> s.getStatus() == StoryStatus.COMPLETED)
-                .mapToInt(s -> {
-                    try {
-                        return Integer.parseInt(s.getFinalResult());
-                    } catch (NumberFormatException e) {
-                        return 0;
-                    }
-                })
-                .sum();
     }
 
 
     @Override
-    public RoomInfoDTO getRoomInfo(UUID roomId) {
-        Room room = getRoomById(roomId);
-
-        List<String> customCards = room.getCustomCards()
-                .stream()
-                .map(card -> card.getValue())
-                .toList();
-
-        return RoomInfoDTO.fromEntity(room);
+    public RoomResponseDTO getRoomInfo(UUID roomId) {
+        try {
+            Room room = getRoomById(roomId);
+            return RoomResponseDTO.fromEntity(room);
+        } catch (RoomNotFoundException e) {
+            logger.error("Room not found with id {}: {}", roomId, e.getMessage());
+            throw e; // Re-throw exception for higher-level handling
+        } catch (Exception e) {
+            logger.error("Unexpected error while fetching room info for roomId {}: {}", roomId, e.getMessage());
+            throw new RuntimeException("An error occurred while fetching room info", e);
+        }
     }
+
+    @Override
+    public RoomSettingsDTO changeRoomSettings(UUID roomId, RoomSettingsDTO settingsRequest, UUID userId) {
+        try {
+            Room room = getRoomById(roomId);
+
+            Player player = playerRepository.findByUserIdAndRoomId(userId, roomId)
+                    .orElseThrow(() -> new UnauthorizedActionException("User is not a participant in the room"));
+
+            if (player.getRole() != PlayerRole.MODERATOR) {
+                throw new UnauthorizedActionException("Only moderators can change the room settings.");
+            }
+
+            RoomSettings roomSettings = room.getRoomSettings();
+
+            if (roomSettings == null) {
+                roomSettings = new RoomSettings();
+                room.setRoomSettings(roomSettings);
+            }
+
+            if (settingsRequest.isAllowQuestionMark() != roomSettings.isAllowQuestionMark()) {
+                roomSettings.setAllowQuestionMark(settingsRequest.isAllowQuestionMark());
+            }
+            if (settingsRequest.isAllowVoteModification() != roomSettings.isAllowVoteModification()) {
+                roomSettings.setAllowVoteModification(settingsRequest.isAllowVoteModification());
+            }
+
+            roomSettingsRepository.save(roomSettings);
+            logger.info("Room settings updated successfully for room {}", roomId);
+
+            return RoomSettingsDTO.fromEntity(roomSettings);
+
+        } catch (UnauthorizedActionException e) {
+            logger.error("Unauthorized action during room settings change: {}", e.getMessage());
+            throw e; // Re-throw exception
+        } catch (Exception e) {
+            logger.error("Unexpected error during room settings change: {}", e.getMessage());
+            throw new RuntimeException("An error occurred while changing the room settings", e);
+        }
+    }
+
 
 }

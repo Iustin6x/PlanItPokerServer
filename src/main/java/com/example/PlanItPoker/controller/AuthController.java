@@ -1,7 +1,6 @@
 package com.example.PlanItPoker.controller;
 
 import com.example.PlanItPoker.model.User;
-import com.example.PlanItPoker.payload.request.ConvertGuestRequest;
 import com.example.PlanItPoker.payload.request.QuickplayRequest;
 import com.example.PlanItPoker.service.AuthService;
 import com.example.PlanItPoker.payload.request.LoginRequest;
@@ -19,10 +18,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -63,11 +63,14 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> signupUser(@RequestBody SignupRequest signupRequest) {
-        User createdUser = authService.createUser(signupRequest);
-        if (createdUser != null) {
+        try {
+            User createdUser = authService.createUser(signupRequest);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to create user");
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", ex.getMessage(),
+                    "timestamp", LocalDateTime.now()
+            ));
         }
     }
 
@@ -84,10 +87,10 @@ public class AuthController {
 
     @GetMapping("/api/user")
     public ResponseEntity<?> getUserDetails(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7); // Remove "Bearer " prefix
+        String token = authHeader.substring(7);
         UUID userId = jwtUtil.extractUserId(token);
         com.example.PlanItPoker.model.User user = userService.findById(userId);
-        logger.info("api/user",user.getId());
+        logger.info("/user",user.getId());
         return ResponseEntity.ok(user);
     }
 

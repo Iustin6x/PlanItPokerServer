@@ -5,6 +5,7 @@ import com.example.PlanItPoker.payload.DTOs.VoteDTO;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface VoteService {
@@ -18,4 +19,7 @@ public interface VoteService {
 
     @Transactional
     VoteSession endVoteSession(UUID sessionId, String finalValue);
+
+    @Transactional
+    Optional<VoteDTO> getVoteBySessionIdAndUserId(UUID sessionId, UUID userId);
 }
